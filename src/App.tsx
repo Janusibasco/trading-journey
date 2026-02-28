@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import Chart from 'chart.js/auto'
 import type {
@@ -31,6 +31,26 @@ type ImportedData = {
 
 type LineChart = Chart<'line', (number | null)[], string>
 
+type SessionWindow = {
+  name: string
+  startUtc: string
+  endUtc: string
+  accent: string
+}
+
+type SessionStatus = SessionWindow & {
+  isOpen: boolean
+  nextLabel: string
+  displayStart: string
+  displayEnd: string
+}
+
+type Settings = {
+  theme: 'dark' | 'light' | 'contrast'
+  fontScale: number
+  timeZone: string
+}
+
 const MONTH_OPTIONS = [
   'January',
   'February',
@@ -46,14 +66,8 @@ const MONTH_OPTIONS = [
   'December',
 ] as const
 
-const moneyFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-})
-
-function formatMoney(value: number): string {
-  return moneyFormatter.format(value)
+function formatMoney(value: number, formatter: Intl.NumberFormat): string {
+  return formatter.format(value)
 }
 
 function getLineGradient(
@@ -146,12 +160,98 @@ function parseMonthDayLabel(label: string): { month: string; day: string } | nul
   }
 }
 
+const SESSION_WINDOWS: SessionWindow[] = [
+  { name: 'Sydney', startUtc: '21:00', endUtc: '06:00', accent: '#a855f7' },
+  { name: 'Tokyo', startUtc: '00:00', endUtc: '09:00', accent: '#22d3ee' },
+  { name: 'London', startUtc: '08:00', endUtc: '17:00', accent: '#34d399' },
+  { name: 'New York', startUtc: '13:00', endUtc: '22:00', accent: '#f59e0b' },
+]
+
+const PHT_OFFSET_MINUTES = 8 * 60 // UTC+8
+const DISPLAY_TIMEZONE_LABEL = 'PHT (UTC+8)'
+const DEFAULT_SETTINGS: Settings = {
+  theme: 'dark',
+  fontScale: 1,
+  timeZone: 'Asia/Manila',
+}
+
+function parseUtcToMinutes(time: string): number {
+  const [hours, minutes] = time.split(':').map((value) => Number(value))
+  return hours * 60 + minutes
+}
+
+function diffMinutes(nowMinutes: number, targetMinutes: number): number {
+  const diff = targetMinutes - nowMinutes
+  return diff >= 0 ? diff : diff + 24 * 60
+}
+
+function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  if (hours === 0) {
+    return `${mins}m`
+  }
+  if (mins === 0) {
+    return `${hours}h`
+  }
+  return `${hours}h ${mins}m`
+}
+
+function toClockLabel(minutes: number): string {
+  const hours = Math.floor(minutes / 60) % 24
+  const mins = minutes % 60
+  const hours12 = ((hours + 11) % 12) + 1
+  const suffix = hours >= 12 ? 'PM' : 'AM'
+  return `${hours12}:${String(mins).padStart(2, '0')} ${suffix}`
+}
+
+function buildSessionStatuses(now: Date): SessionStatus[] {
+  const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes()
+
+  return SESSION_WINDOWS.map((session) => {
+    const start = parseUtcToMinutes(session.startUtc)
+    const end = parseUtcToMinutes(session.endUtc)
+
+    const spansMidnight = end < start
+    const isOpen = spansMidnight
+      ? nowMinutes >= start || nowMinutes < end
+      : nowMinutes >= start && nowMinutes < end
+
+    let nextEventMinutes: number
+    let nextLabel: string
+
+    if (isOpen) {
+      nextEventMinutes = spansMidnight && nowMinutes < start ? start : end
+      const closesIn = diffMinutes(nowMinutes, nextEventMinutes)
+      nextLabel = `closes in ${formatDuration(closesIn)}`
+    } else {
+      nextEventMinutes = start
+      const opensIn = diffMinutes(nowMinutes, nextEventMinutes)
+      nextLabel = `opens in ${formatDuration(opensIn)}`
+    }
+
+    const displayStartMinutes = (start + PHT_OFFSET_MINUTES) % (24 * 60)
+    const displayEndMinutes = (end + PHT_OFFSET_MINUTES) % (24 * 60)
+
+    return {
+      ...session,
+      isOpen,
+      nextLabel,
+      displayStart: `${toClockLabel(displayStartMinutes)}`,
+      displayEnd: `${toClockLabel(displayEndMinutes)}`,
+    }
+  })
+}
+
+
 function App() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [filterMode, setFilterMode] = useState<FilterMode>('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const settings = DEFAULT_SETTINGS
 
+  const [nowUtc, setNowUtc] = useState<Date>(() => new Date())
   const [monthInput, setMonthInput] = useState('')
   const [dayInput, setDayInput] = useState('')
   const [valueInput, setValueInput] = useState('')
@@ -168,6 +268,32 @@ function App() {
   const rafHandleRef = useRef<number | null>(null)
   const entriesRef = useRef<Entry[]>([])
   entriesRef.current = entries
+
+  const moneyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+      }),
+    [],
+  )
+
+  useEffect(() => {
+    document.body.dataset.theme = settings.theme
+    document.documentElement.style.setProperty('--font-scale', settings.fontScale.toString())
+  }, [settings])
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setNowUtc(new Date())
+    }, 15_000)
+
+    return () => {
+      window.clearInterval(interval)
+    }
+  }, [])
 
   const queueChartUpdate = useCallback(() => {
     if (rafHandleRef.current !== null) {
@@ -393,7 +519,7 @@ function App() {
             },
             ticks: {
               callback(value) {
-                return formatMoney(Number(value))
+                return formatMoney(Number(value), moneyFormatter)
               },
             },
           },
@@ -410,7 +536,7 @@ function App() {
                 const index = context.dataIndex
                 const data = context.dataset.data as number[]
                 const current = Number(data[index])
-                const priceLine = `Price: ${formatMoney(current)}`
+                const priceLine = `Price: ${formatMoney(current, moneyFormatter)}`
 
                 if (index === 0) {
                   return priceLine
@@ -420,7 +546,7 @@ function App() {
                 const difference = current - previous
                 const percent =
                   previous === 0 ? 0 : ((difference / previous) * 100)
-                const change = formatMoney(Math.abs(difference))
+                const change = formatMoney(Math.abs(difference), moneyFormatter)
 
                 if (difference > 0) {
                   return [
@@ -530,6 +656,19 @@ function App() {
         return true
       })
   }, [entries, filterMode, searchTerm])
+
+  const sessionStatuses = useMemo(() => buildSessionStatuses(nowUtc), [nowUtc])
+  const openSessions = sessionStatuses.filter((session) => session.isOpen)
+  const nowPhtLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat('en-US', {
+        timeZone: settings.timeZone,
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).format(nowUtc),
+    [nowUtc, settings.timeZone],
+  )
 
   const addData = useCallback(() => {
     const month = monthInput
@@ -659,7 +798,7 @@ function App() {
   }, [])
 
   const footerBalance =
-    entries.length > 0 ? formatMoney(entries[entries.length - 1].value) : '--'
+    entries.length > 0 ? formatMoney(entries[entries.length - 1].value, moneyFormatter) : '--'
   const footerUpdated = entries.length > 0 ? entries[entries.length - 1].label : '--'
 
   return (
@@ -668,13 +807,26 @@ function App() {
         <h2>Profit Linechart</h2>
         <div className="header-actions">
           <button type="button" className="btn btn-accent" onClick={exportJson}>
-            Export JSON
+            Export Data
           </button>
           <button type="button" className="btn btn-secondary" onClick={openImportFileDialog}>
-            Import JSON
+            Import Data
           </button>
-          <button type="button" className="btn btn-primary capture-btn" onClick={captureChart}>
-            Capture
+          <button type="button" className="btn btn-primary capture-btn icon-only" onClick={captureChart}>
+            <span className="icon-camera" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M8.5 6.5 10 4h4l1.5 2.5H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8.5a2 2 0 0 1 2-2h3.5Z"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle cx="12" cy="13" r="4" stroke="currentColor" strokeWidth="1.6" />
+                <circle cx="18" cy="9" r="0.9" fill="currentColor" />
+              </svg>
+            </span>
+            <span className="visually-hidden">Capture chart</span>
           </button>
           <input
             ref={fileInputRef}
@@ -739,7 +891,7 @@ function App() {
       <div className="controls">
         <select
           id="monthInput"
-          className="span-2"
+          className="span-2 month-select"
           value={monthInput}
           onChange={(event) => setMonthInput(event.target.value)}
         >
@@ -754,7 +906,7 @@ function App() {
         </select>
 
         <input
-          className="span-1"
+          className="span-1 day-input"
           type="number"
           id="dayInput"
           min={1}
@@ -768,13 +920,13 @@ function App() {
           className="span-2"
           type="number"
           id="valueInput"
-          placeholder="Enter Amount ($)"
+          placeholder="Deposit Amount ($)"
           value={valueInput}
           onChange={(event) => setValueInput(event.target.value)}
         />
 
         <button type="button" className="btn btn-primary span-1" onClick={addData}>
-          Add
+          Deposit
         </button>
 
         <button type="button" className="btn btn-secondary span-1" onClick={clearData}>
@@ -785,7 +937,7 @@ function App() {
 
         <select
           id="withdrawMonthInput"
-          className="span-2"
+          className="span-2 month-select"
           value={withdrawMonthInput}
           onChange={(event) => setWithdrawMonthInput(event.target.value)}
         >
@@ -800,7 +952,7 @@ function App() {
         </select>
 
         <input
-          className="span-1"
+          className="span-1 day-input"
           type="number"
           id="withdrawDayInput"
           min={1}
@@ -819,53 +971,137 @@ function App() {
           onChange={(event) => setWithdrawValueInput(event.target.value)}
         />
 
-        <button type="button" className="btn btn-primary span-1" onClick={addWithdrawal}>
+        <button type="button" className="btn btn-withdraw span-1" onClick={addWithdrawal}>
           Withdraw
         </button>
         <div className="span-1" />
       </div>
 
       <div className="list" id="dataList" onMouseLeave={() => setActiveChartPoint(null)}>
-        {filteredRows.map(({ entry, index }) => {
-          const previousValue = index > 0 ? entries[index - 1].value : entry.value
-          const isLoss = !entry.isWithdrawal && index > 0 && entry.value < previousValue
-          const badgeText = entry.isWithdrawal ? 'WD' : isLoss ? 'DOWN' : 'UP'
-          const badgeClass = entry.isWithdrawal
-            ? 'tag-wd'
-            : isLoss
-              ? 'tag-pl-down'
-              : 'tag-pl'
+        {filteredRows.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-pill">No entries yet</div>
+            <p>Add P&L or withdrawals to populate your timeline.</p>
+          </div>
+        ) : (
+          filteredRows.map(({ entry, index }) => {
+            const previousValue = index > 0 ? entries[index - 1].value : entry.value
+            const isLoss = !entry.isWithdrawal && index > 0 && entry.value < previousValue
+            const badgeText = entry.isWithdrawal ? 'WD' : index === 0 ? 'DEP' : isLoss ? 'DOWN' : 'UP'
+            const badgeClass = entry.isWithdrawal
+              ? 'tag-wd'
+              : index === 0
+                ? 'tag-dep'
+                : isLoss
+                  ? 'tag-pl-down'
+                  : 'tag-pl'
+            const parsedLabel = parseMonthDayLabel(entry.label)
+            const dateLabel = parsedLabel ? `${parsedLabel.month} ${parsedLabel.day}` : entry.label
+            const delta = index === 0 ? null : entry.value - entries[index - 1].value
+            const isDeposit = index === 0
+            const deltaLabel = isDeposit
+              ? 'Deposit'
+              : delta === null
+                ? '—'
+                : `${delta > 0 ? '+' : ''}${formatMoney(delta, moneyFormatter)}`
 
-          return (
-            <div
-              key={`${entry.label}-${index}`}
-              className={`list-row ${activeIndex === index ? 'list-row-active' : ''}`}
-              data-idx={index}
-              onMouseEnter={() => setActiveChartPoint(index)}
-              onClick={() => {
-                setActiveChartPoint(index)
-                chartRef.current?.canvas.scrollIntoView({
-                  behavior: 'smooth',
-                  block: 'start',
-                })
-              }}
-            >
-              <span className={badgeClass}>{badgeText}</span>
-              <span className="entry-text">
-                {entry.label}: {formatMoney(entry.value)}
-              </span>
-              <span className="entry-balance">Bal: {formatMoney(entry.value)}</span>
-            </div>
-          )
-        })}
+            return (
+              <div
+                key={`${entry.label}-${index}`}
+                className={`list-row ${activeIndex === index ? 'list-row-active' : ''}`}
+                data-idx={index}
+                onMouseEnter={() => setActiveChartPoint(index)}
+                onClick={() => {
+                  setActiveChartPoint(index)
+                  chartRef.current?.canvas.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  })
+                }}
+              >
+                <span className={badgeClass}>{badgeText}</span>
+                <span className="entry-text">
+                  <span className="entry-amount">{formatMoney(entry.value, moneyFormatter)}</span>
+                  <span className="entry-date">{dateLabel}</span>
+                </span>
+                <span
+                  className={`entry-delta ${
+                    isDeposit
+                      ? 'delta-dep'
+                      : entry.isWithdrawal
+                        ? 'delta-withdraw'
+                        : delta === null
+                          ? 'delta-neutral'
+                          : delta > 0
+                            ? 'delta-up'
+                            : 'delta-down'
+                  }`}
+                >
+                  {deltaLabel}
+                </span>
+              </div>
+            )
+          })
+        )}
       </div>
 
       <div className="list-footer" id="listFooter">
-        <span id="footerBalance">Balance: {footerBalance}</span>
-        <span id="footerCount">Entries: {filteredRows.length}</span>
-        <span id="footerUpdated">Last updated: {footerUpdated}</span>
+        <div className="footer-metric">
+          <span className="metric-label">Balance</span>
+          <span className="metric-value" id="footerBalance">
+            {footerBalance}
+          </span>
+        </div>
+        <div className="footer-metric">
+          <span className="metric-label">Entries</span>
+          <span className="metric-value" id="footerCount">
+            {filteredRows.length}
+          </span>
+        </div>
+        <div className="footer-metric">
+          <span className="metric-label">Last updated</span>
+          <span className="metric-value" id="footerUpdated">
+            {footerUpdated}
+          </span>
+        </div>
       </div>
 
+      <div className="session-panel session-bottom">
+        <div className="session-meta">
+          <span className="live-dot live-on" aria-label="Live indicator" />
+          <div>
+            <div className="session-title">Live Trading Sessions</div>
+            <div className="session-subtitle">
+              Current time · {nowPhtLabel} {settings.timeZone}
+            </div>
+          </div>
+          <span className="session-open-count">
+            {openSessions.length > 0 ? `${openSessions.length} open` : 'All closed'}
+          </span>
+        </div>
+        <div className="session-grid session-grid-compact">
+          {sessionStatuses.map((session) => (
+            <div
+              key={session.name}
+              className={`session-card ${session.isOpen ? 'session-card-open' : 'session-card-closed'}`}
+              style={{ borderColor: session.isOpen ? session.accent : 'rgba(255,255,255,0.08)' }}
+            >
+              <div className="session-card-top">
+                <span className="session-chip" style={{ background: session.accent }}>
+                  {session.name}
+                </span>
+                <span className={session.isOpen ? 'status-pill open' : 'status-pill closed'}>
+                  {session.isOpen ? 'OPEN' : 'CLOSED'}
+                </span>
+              </div>
+              <div className="session-timing">
+                {session.displayStart} - {session.displayEnd} {DISPLAY_TIMEZONE_LABEL}
+              </div>
+              <div className="session-next">{session.nextLabel}</div>
+            </div>
+          ))}
+        </div>
+      </div>
       <footer className="credits">
         Credits: Janus "Pogi" Ibasco &amp; Mark Gil "Gwapo" Camba
       </footer>
