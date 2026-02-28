@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <link rel="stylesheet" href="style.css">
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Trading Journey</title>
+
+        <style>
+ body {
+     font-family: 'Segoe UI', sans-serif;
+     background: radial-gradient(circle at 18% 20%, rgba(34,211,238,0.09), transparent 26%),
+                 radial-gradient(circle at 82% 0%, rgba(14,165,233,0.07), transparent 22%),
+                 linear-gradient(145deg, #0b1224, #0e162b 60%, #0a1326);
+     display: flex;
+     justify-content: center;
+     align-items: center;
+     min-height: 100vh;
+     color: #e5e7eb;
+     padding: 18px;
+ }
+ 
+ .container {
+     background: rgba(255,255,255,0.04);
+     border: 1px solid rgba(255,255,255,0.06);
+     backdrop-filter: blur(18px);
+     padding: 28px;
+     border-radius: 18px;
+     width: 100%;
+     max-width: 900px;
+     box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+ }
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.capture-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+}
+
+canvas {
+    margin-top: 20px;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 220px;
+}
+
+.controls {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 14px;
+    padding: 14px;
+}
+
+input, select, button {
+    border-radius: 10px;
+     border: 1px solid rgba(255,255,255,0.08);
+     outline: none;
+     background: rgba(255,255,255,0.04);
+     color: #e5e7eb;
+     height: 44px;
+ }
+ 
+ input::placeholder {
+     color: rgba(255,255,255,0.55);
+ }
+ 
+ button {
+     cursor: pointer;
+     background: linear-gradient(135deg, #22d3ee, #0ea5e9);
+     color: #0b1727;
+     font-weight: 700;
+     letter-spacing: 0.2px;
+     border: none;
+     box-shadow: 0 8px 20px rgba(14,165,233,0.25);
+ }
+ 
+ button:hover {
+     transform: translateY(-1px);
+ }
+ 
+.btn {
+    all: unset;
+    cursor: pointer;
+    height: 42px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    padding: 0 14px;
+    letter-spacing: 0.2px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 120ms ease, box-shadow 150ms ease, background 160ms ease;
+}
+.btn::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    border-radius: 9px;
+    border: 1px solid rgba(255,255,255,0.08);
+    pointer-events: none;
+}
+.btn-primary {
+    background: linear-gradient(135deg, #2dd4bf, #0ea5e9);
+    color: #0b1727;
+    box-shadow: 0 10px 22px rgba(14,165,233,0.25), 0 1px 0 rgba(255,255,255,0.08) inset;
+}
+.btn-secondary {
+    background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+    color: #e5e7eb;
+    box-shadow: 0 10px 22px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.06) inset;
+}
+.btn-accent {
+    background: linear-gradient(135deg, #60a5fa, #2563eb);
+    color: #0b1224;
+    box-shadow: 0 10px 24px rgba(37,99,235,0.28), 0 1px 0 rgba(255,255,255,0.08) inset;
+}
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(14,165,233,0.32);
+}
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 0 6px 14px rgba(14,165,233,0.28) inset;
+}
+ 
+ .list {
+     margin-top: 15px;
+     max-height: 120px;
+     overflow-y: auto;
+     background: rgba(255,255,255,0.02);
+     border: 1px solid rgba(255,255,255,0.05);
+     border-radius: 12px;
+     padding: 8px 10px;
+ }
+ .tag-pl { color: #22d3ee; font-weight: 600; }
+ .tag-pl-down { color: #f87171; font-weight: 600; }
+ .tag-wd { color: #34d399; font-weight: 600; }
+
+ /* Custom scrollbar for list */
+ .list::-webkit-scrollbar {
+     width: 10px;
+ }
+ .list::-webkit-scrollbar-track {
+     background: rgba(255,255,255,0.04);
+     border-radius: 10px;
+ }
+ .list::-webkit-scrollbar-thumb {
+     background: linear-gradient(180deg, #22d3ee, #2563eb);
+     border-radius: 10px;
+     border: 2px solid rgba(16,24,40,0.65);
+     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+ }
+ .list::-webkit-scrollbar-thumb:hover {
+     background: linear-gradient(180deg, #38e0ff, #3b82f6);
+ }
+ .list {
+     scrollbar-width: thin;
+     scrollbar-color: #22d3ee rgba(255,255,255,0.04);
+ }
+
+/* Mobile-first usability */
+@media (max-width: 700px) {
+    body { padding: 12px; }
+    .container {
+        width: 100%;
+        max-width: 560px;
+        padding: 18px;
+        border-radius: 14px;
+    }
+    .header h2 { font-size: 1.3rem; }
+    .capture-btn { padding: 8px 10px; font-size: 12px; }
+
+    .filters, .legend { flex-direction: column; align-items: stretch; gap: 8px; }
+    .toggle-group { width: 100%; }
+    .toggle-group .filter-btn { flex: 1; width: 100%; text-align: center; }
+    #searchInput { max-width: none; width: 100%; }
+
+    .controls {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+    }
+    .controls > * { width: 100%; }
+    .controls button,
+    .btn { height: 36px; font-size: 12px; padding: 8px 10px; border-radius: 10px; }
+    .btn::after { border-radius: 9px; }
+    .controls select, .controls input { min-height: 36px; border-radius: 10px; }
+
+    .list { max-height: 220px; }
+    .list-footer { flex-wrap: wrap; gap: 8px; }
+    .list-footer span { flex: 1 1 45%; }
+}
+
+@media (max-width: 480px) {
+    .controls { grid-template-columns: 1fr; }
+    .filters { gap: 6px; }
+    .legend { font-size: 11px; }
+.list-footer span { flex: 1 1 100%; }
+    .container { padding: 14px; }
+    canvas { min-height: 180px; }
+    .controls button,
+    .btn { height: 34px; font-size: 11px; padding: 7px 9px; }
+    .controls select, .controls input { min-height: 34px; }
+}
+
+/* flex span helpers */
+.span-1 { flex: 1 1 140px; }
+.span-2 { flex: 2 1 220px; }
+.span-3 { flex: 3 1 320px; }
+.span-4 { flex: 4 1 420px; }
+.span-5 { flex: 5 1 520px; }
+.span-6 { flex: 6 1 620px; }
+
+.form-divider {
+    flex: 1 1 100%;
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    border-radius: 999px;
+    margin: 4px 0;
+}
+
+@media (max-width: 960px) {
+    .controls > * { flex: 1 1 220px; }
+    .form-divider { flex-basis: 100%; }
+}
+@media (max-width: 640px) {
+    .controls > * { flex: 1 1 100%; }
+}
+</style>
+    </head>
+    <body>
+
+        <div class="container">
+
+            <!-- ✅ Header with actions -->
+            <div class="header">
+                <h2>Profit Linechart</h2>
+                <div class="header-actions">
+                    <button class="btn btn-accent" onclick="exportJSON()">Export JSON</button>
+                    <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Import JSON</button>
+                    <button class="capture-btn" onclick="captureChart()">📸 Capture</button>
+                    <input type="file" id="importFile" accept=".json" hidden onchange="importJSON(event)">
+                </div>
+            </div>
+
+            <canvas id="chart"></canvas>
+
+            <div class="filters">
+                <div class="toggle-group">
+                    <button class="filter-btn" data-filter="all"
+                        aria-pressed="true">All</button>
+                    <button class="filter-btn" data-filter="pl">P&L only</button>
+                    <button class="filter-btn" data-filter="wd">Withdrawals only</button>
+                </div>
+                <input id="searchInput" type="search"
+                    placeholder="Search month/day…">
+            </div>
+
+            <div class="legend">
+                <span class="badge badge-up">▲ Gain</span>
+                <span class="badge badge-down">▼ Loss</span>
+                <span class="badge badge-wd">⬇ Withdrawal</span>
+            </div>
+            <div class="controls">
+                <!-- Deposit row -->
+                <select id="monthInput" class="span-2">
+                    <option value="" disabled selected>Select Month</option>
+                    <option>January</option>
+                    <option>February</option>
+                    <option>March</option>
+                    <option>April</option>
+                    <option>May</option>
+                    <option>June</option>
+                    <option>July</option>
+                    <option>August</option>
+                    <option>September</option>
+                    <option>October</option>
+                    <option>November</option>
+                    <option>December</option>
+                </select>
+                <input class="span-1" type="number" id="dayInput" min="1" max="31"
+                    placeholder="Day">
+                <input class="span-2" type="number" id="valueInput"
+                    placeholder="Enter Amount ($)">
+                <button class="btn btn-primary span-1" onclick="addData()">Add</button>
+                <button class="btn btn-secondary span-1" onclick="clearData()">Clear</button>
+
+                <!-- Divider -->
+                <div class="form-divider span-6"></div>
+
+                <!-- Withdraw row -->
+                <select id="withdrawMonthInput" class="span-2">
+                    <option value="" disabled selected>Withdraw Month</option>
+                    <option>January</option>
+                    <option>February</option>
+                    <option>March</option>
+                    <option>April</option>
+                    <option>May</option>
+                    <option>June</option>
+                    <option>July</option>
+                    <option>August</option>
+                    <option>September</option>
+                    <option>October</option>
+                    <option>November</option>
+                    <option>December</option>
+                </select>
+                <input class="span-1" type="number" id="withdrawDayInput" min="1" max="31"
+                    placeholder="Day">
+                <input class="span-2" type="number" id="withdrawInput"
+                    placeholder="Withdrawal Amount ($)">
+                <button class="btn btn-primary span-1" onclick="addWithdrawal()">Withdraw</button>
+                <div class="span-1"></div>
+            </div>
+
+            <div class="list" id="dataList"></div>
+            <div class="list-footer" id="listFooter">
+                <span id="footerBalance">Balance: —</span>
+                <span id="footerCount">Entries: 0</span>
+                <span id="footerUpdated">Last updated: —</span>
+            </div>
+        </div>
+
+        <script
+            src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+        <script>
+let months = [];
+let values = [];
+let withdrawals = [];
+let withdrawalIndexes = [];
+let filterMode = 'all';
+let searchTerm = '';
+
+const blendPlugin = {
+    id: 'blendPlugin',
+    beforeDatasetsDraw(chart) {
+        chart.ctx.save();
+        chart.ctx.globalCompositeOperation = 'screen'; // additive-style mix for overlapping fills
+    },
+    afterDatasetsDraw(chart) {
+        chart.ctx.restore();
+    }
+};
+
+const ctx = document.getElementById('chart').getContext('2d');
+const dataList = document.getElementById('dataList');
+const footerBalance = document.getElementById('footerBalance');
+const footerCount = document.getElementById('footerCount');
+const footerUpdated = document.getElementById('footerUpdated');
+const searchInput = document.getElementById('searchInput');
+const filterButtons = document.querySelectorAll('.filter-btn');
+
+const chart = new Chart(ctx, {
+    type: 'line',
+    plugins: [blendPlugin],
+    data: {
+        labels: months,
+       datasets: [
+
+    {
+        label: 'Daily Amount (USD)',
+        data: values,
+        borderColor: (context) => getLineGradient(context, [
+            { stop: 0, color: '#22d3ee' },
+            { stop: 0.5, color: '#38bdf8' },
+            { stop: 1, color: '#0ea5e9' }
+        ]),
+        backgroundColor: (context) => getLineGradient(context, [
+            { stop: 0, color: 'rgba(34, 211, 238, 0.18)' },
+            { stop: 0.5, color: 'rgba(56, 189, 248, 0.16)' },
+            { stop: 1, color: 'rgba(14, 165, 233, 0.16)' }
+        ]),
+        borderWidth: 3,
+        tension: 0.2,
+        cubicInterpolationMode: 'monotone',
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        pointBorderWidth: 2,
+        pointBackgroundColor: (ctx) => {
+            const data = ctx.dataset.data;
+            const i = ctx.dataIndex;
+            if (withdrawalIndexes.includes(i)) return '#00ff88';
+            if (i === 0) return '#00c6ff';
+            return data[i] < data[i - 1] ? '#ff0000' : '#00c6ff';
+        },
+        pointBorderColor: (ctx) => {
+            const data = ctx.dataset.data;
+            const i = ctx.dataIndex;
+            if (withdrawalIndexes.includes(i)) return '#00ff88';
+            if (i === 0) return '#00c6ff';
+            return data[i] < data[i - 1] ? '#ff0000' : '#00c6ff';
+        },
+        fill: true,
+        segment: {
+
+    borderColor: (ctx) => {
+        const currentIndex = ctx.p1DataIndex;
+        const current = ctx.p1.parsed.y;
+        const previous = ctx.p0.parsed.y;
+
+        if (withdrawalIndexes.includes(currentIndex)) {
+            return '#00ff88'; // 🟢 withdrawal
+        }
+
+        if (current < previous) {
+            return '#ff0000'; // 🔴 normal drop
+        }
+
+        return '#00c6ff'; // 🔵 rise
+    },
+
+    backgroundColor: (ctx) => {
+        const currentIndex = ctx.p1DataIndex;
+        const current = ctx.p1.parsed.y;
+        const previous = ctx.p0.parsed.y;
+
+        if (withdrawalIndexes.includes(currentIndex)) {
+            return 'rgba(0, 255, 136, 0.18)'; // 🟢 softer green band
+        }
+
+        if (current < previous) {
+            return 'rgba(255, 77, 77, 0.18)'; // 🔴 subtle loss band
+        }
+
+        return 'rgba(0, 198, 255, 0.12)'; // 🔵 subtle gain band
+    }
+}
+    },
+
+    // 🟢 Withdrawal markers
+    {
+    label: 'Withdrawal',
+    data: withdrawals,
+    borderColor: (context) => getLineGradient(context, [
+        { stop: 0, color: '#34d399' },
+        { stop: 1, color: '#10b981' }
+    ]),
+    backgroundColor: (context) => getLineGradient(context, [
+        { stop: 0, color: 'rgba(52, 211, 153, 0.22)' },
+        { stop: 1, color: 'rgba(16, 185, 129, 0.18)' }
+    ]),
+    pointRadius: 0,
+    pointHoverRadius: 0,
+    pointBorderWidth: 0,
+    pointBorderColor: 'transparent',
+    showLine: false
+}
+
+]
+    },
+    options: {
+    responsive: true,
+    interaction: { intersect: false, mode: 'nearest' },
+
+    scales: {
+        y: {
+            beginAtZero: true,
+            grid: {
+                color: 'rgba(255,255,255,0.06)',
+                borderColor: 'rgba(255,255,255,0.08)'
+            },
+            ticks: {
+                callback: (value) => {
+                    return new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD',
+                        maximumFractionDigits: 0
+                    }).format(Number(value));
+                }
+            }
+        }
+    },
+
+   plugins: {
+    legend: {
+        onHover: (event, legendItem) => {
+            const idx = legendItem.datasetIndex;
+            chart.data.datasets.forEach((ds, i) => {
+                ds.borderWidth = i === idx ? 3 : 2;
+                ds.borderColor = i === idx ? ds.borderColor : 'rgba(255,255,255,0.25)';
+                ds.backgroundColor = i === idx ? ds.backgroundColor : 'rgba(255,255,255,0.08)';
+            });
+            queueChartUpdate();
+        },
+        onLeave: () => {
+            chart.data.datasets.forEach((ds) => {
+                if (ds.label === 'Daily Amount (USD)') {
+                    ds.borderColor = '#00c6ff';
+                    ds.backgroundColor = 'rgba(0, 198, 255, 0.2)';
+                } else if (ds.label === 'Withdrawal') {
+                    ds.borderColor = '#00ff88';
+                    ds.backgroundColor = '#00ff88';
+                }
+            });
+            queueChartUpdate();
+        },
+        labels: {
+            color: (legendItem) => legendItem.text === 'Withdrawal' ? '#00ff88' : '#dfe8ff'
+        }
+    },
+    tooltip: {
+        callbacks: {
+
+            label: function(context) {
+                const index = context.dataIndex;
+                const dataset = context.dataset.data;
+                const current = dataset[index];
+
+                const formattedPrice = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    maximumFractionDigits: 0
+                }).format(current);
+
+                if (index === 0) {
+                    return `Price: ${formattedPrice}`;
+                }
+
+                const previous = dataset[index - 1];
+                const difference = current - previous;
+                const percent = ((difference / previous) * 100).toFixed(2);
+
+                const formattedDiff = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    maximumFractionDigits: 0
+                }).format(Math.abs(difference));
+
+                if (difference > 0) {
+                    return [
+                        `Price: ${formattedPrice}`,
+                        `Increase: +${formattedDiff} (+${percent}%)`
+                    ];
+                } else if (difference < 0) {
+
+                    if (withdrawalIndexes.includes(index)) {
+                        return [
+                            `Price: ${formattedPrice}`,
+                            `Withdrawal: -${formattedDiff} (${percent}%)`
+                        ];
+                    }
+
+                    return [
+                        `Price: ${formattedPrice}`,
+                        `Decrease: -${formattedDiff} (${percent}%)`
+                    ];
+                } else {
+                    return `Price: ${formattedPrice} (No Change)`;
+                }
+            },
+
+            labelTextColor: function(context) {
+                const index = context.dataIndex;
+                const dataset = context.dataset.data;
+
+                if (index > 0 && dataset[index] < dataset[index - 1]) {
+
+                    if (withdrawalIndexes.includes(index)) {
+                        return '#00ff88'; // 🟢 green for withdrawal
+                    }
+
+                    return '#ff0000'; // 🔴 red for normal loss
+                }
+
+                return '#00c6ff'; // 🔵 blue for increase
+            }
+        }
+    }
+}
+}
+});
+
+chart.options.onHover = (event, elements) => {
+    if (elements.length === 0) return;
+    const idx = elements[0].index;
+    highlightListRow(idx);
+};
+
+filterButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        filterMode = btn.dataset.filter;
+        filterButtons.forEach(b => b.setAttribute('aria-pressed', b === btn));
+        updateList();
+    });
+});
+
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        searchTerm = e.target.value.toLowerCase();
+        updateList();
+    });
+}
+
+dataList.addEventListener('mouseenter', handleListHover, true);
+dataList.addEventListener('click', handleListHover, true);
+dataList.addEventListener('mouseleave', () => {
+    chart.setActiveElements([]);
+    queueChartUpdate();
+});
+
+function addData() {
+    const month = document.getElementById('monthInput').value;
+    const day = document.getElementById('dayInput').value.trim();
+    const value = Number(document.getElementById('valueInput').value);
+
+    if (!month || !day || isNaN(value)) {
+        alert("Select a month, enter a day, and amount.");
+        return;
+    }
+
+    const label = `${month} ${day}`;
+
+    months.push(label);
+    values.push(value);
+    withdrawals.push(null); // keep withdrawals dataset aligned with labels
+
+    queueChartUpdate();
+    updateList();
+
+    document.getElementById('monthInput').value = "";
+    document.getElementById('dayInput').value = "";
+    document.getElementById('valueInput').value = "";
+}
+
+function addWithdrawal() {
+    const withdrawMonth = document.getElementById('withdrawMonthInput').value;
+    const withdrawDay = document.getElementById('withdrawDayInput').value.trim();
+    const amount = Number(document.getElementById('withdrawInput').value);
+
+    if (!withdrawMonth || !withdrawDay || isNaN(amount) || amount <= 0) {
+        alert("Select a withdraw month, enter a day, and amount.");
+        return;
+    }
+
+    if (values.length === 0) {
+        alert("Add data first before withdrawing.");
+        return;
+    }
+
+    const lastValue = values[values.length - 1];
+    const newValue = lastValue - amount;
+
+    const withdrawDate = `${withdrawMonth} ${withdrawDay}`;
+
+    months.push(withdrawDate);
+    values.push(newValue);
+    withdrawals.push(newValue); // place withdrawal at matching index
+
+    // 🔥 Mark this index as withdrawal
+    withdrawalIndexes.push(values.length - 1);
+
+    queueChartUpdate();
+    updateList();
+
+    document.getElementById('withdrawMonthInput').value = "";
+    document.getElementById('withdrawDayInput').value = "";
+    document.getElementById('withdrawInput').value = "";
+}
+
+function clearData() {
+    months.length = 0;
+    values.length = 0;
+    withdrawals.length = 0;
+    withdrawalIndexes.length = 0;
+    queueChartUpdate();
+    updateList();
+}
+
+function updateList() {
+    const rows = months
+        .map((label, i) => ({ label, i }))
+        .filter(({ label, i }) => {
+            const isWithdrawal = withdrawalIndexes.includes(i);
+            if (filterMode === 'pl' && isWithdrawal) return false;
+            if (filterMode === 'wd' && !isWithdrawal) return false;
+            if (searchTerm && !label.toLowerCase().includes(searchTerm)) return false;
+            return true;
+        })
+        .map(({ label, i }) => {
+            const isWithdrawal = withdrawalIndexes.includes(i);
+            const prev = i > 0 ? values[i - 1] : values[i];
+            const isLoss = !isWithdrawal && i > 0 && values[i] < prev;
+            const badge = isWithdrawal ? '⬇' : (isLoss ? '▼' : '▲');
+            const badgeClass = isWithdrawal ? 'tag-wd' : (isLoss ? 'tag-pl-down' : 'tag-pl');
+            const price = formatMoney(values[i]);
+            return `<div class="list-row" data-idx="${i}">
+                <span class="${badgeClass}">${badge}</span>
+                <span class="entry-text">${label}: ${price}</span>
+                <span class="entry-balance">Bal: ${price}</span>
+            </div>`;
+        });
+
+    dataList.innerHTML = rows.join('');
+
+    footerBalance.textContent = `Balance: ${values.length ? formatMoney(values[values.length - 1]) : '—'}`;
+    footerCount.textContent = `Entries: ${rows.length}`;
+    footerUpdated.textContent = `Last updated: ${months[months.length - 1] || '—'}`;
+}
+
+function exportJSON() {
+    const data = { months, values, withdrawalIndexes };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json"
+    });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "monthly_income_data.json";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            months.length = 0;
+            values.length = 0;
+            months.push(...data.months);
+            values.push(...data.values.map(Number));
+            withdrawals.length = 0;
+            withdrawalIndexes.length = 0;
+            withdrawalIndexes.push(...(data.withdrawalIndexes || []));
+            // rebuild withdrawals dataset aligned with labels
+            withdrawals.push(
+                ...months.map((_, idx) =>
+                    withdrawalIndexes.includes(idx) ? values[idx] : null
+                )
+            );
+            queueChartUpdate();
+            updateList();
+            setDateInputsFromLabels(months);
+        } catch (err) {
+            alert("Error reading JSON file.");
+        }
+    };
+    reader.readAsText(file);
+}
+
+function setDateInputsFromLabels(labels) {
+    const label = labels[labels.length - 1] || labels[0];
+    if (!label) return false;
+    const match = /^([A-Za-z]+)\s+(\d{1,2})/.exec(label);
+    if (!match) return false;
+    const [, monthName, day] = match;
+    const monthSelect = document.getElementById('monthInput');
+    if (monthSelect) monthSelect.value = monthName;
+    const dayInput = document.getElementById('dayInput');
+    if (dayInput) dayInput.value = day;
+    const withdrawMonthSelect = document.getElementById('withdrawMonthInput');
+    if (withdrawMonthSelect) withdrawMonthSelect.value = monthName;
+    const withdrawDayInput = document.getElementById('withdrawDayInput');
+    if (withdrawDayInput) withdrawDayInput.value = day;
+    return true;
+}
+
+function setDateInputsToToday() {
+    const now = new Date();
+    const monthName = now.toLocaleString('en-US', { month: 'long' });
+    const day = String(now.getDate()).padStart(2, '0');
+    const monthSelect = document.getElementById('monthInput');
+    if (monthSelect) monthSelect.value = monthName;
+    const dayInput = document.getElementById('dayInput');
+    if (dayInput) dayInput.value = day;
+    const withdrawMonthSelect = document.getElementById('withdrawMonthInput');
+    if (withdrawMonthSelect) withdrawMonthSelect.value = monthName;
+    const withdrawDayInput = document.getElementById('withdrawDayInput');
+    if (withdrawDayInput) withdrawDayInput.value = day;
+}
+
+// Auto-load data file if present; else default to today's date
+(function autoLoadTodayFile() {
+    const candidates = [
+        'monthly_income_data.json'
+    ];
+
+    const applyData = (data) => {
+        months.length = 0;
+        values.length = 0;
+        withdrawals.length = 0;
+        withdrawalIndexes.length = 0;
+        months.push(...(data.months || []));
+        values.push(...(data.values || []).map(Number));
+        withdrawalIndexes.push(...(data.withdrawalIndexes || []));
+        // keep withdrawals dataset aligned
+        withdrawals.push(
+            ...months.map((_, idx) =>
+                withdrawalIndexes.includes(idx) ? values[idx] : null
+            )
+        );
+        queueChartUpdate();
+        updateList();
+        if (!setDateInputsFromLabels(months)) {
+            setDateInputsToToday();
+        }
+    };
+
+    (async () => {
+        for (const name of candidates) {
+            try {
+                const res = await fetch(name, { cache: 'no-store' });
+                if (!res.ok) continue;
+                const data = await res.json();
+                applyData(data);
+                break;
+            } catch (err) {
+                // ignore and try next candidate
+            }
+        }
+        // If nothing loaded, set today's date
+        if (months.length === 0) {
+            setDateInputsToToday();
+        }
+    })();
+})();
+
+function captureChart() {
+    const canvas = document.getElementById('chart');
+    const link = document.createElement('a');
+    link.download = 'trading-chart.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+function formatMoney(v) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0
+    }).format(v);
+}
+
+let chartUpdateHandle = null;
+function queueChartUpdate() {
+    if (chartUpdateHandle) return;
+    chartUpdateHandle = requestAnimationFrame(() => {
+        chart.update();
+        chartUpdateHandle = null;
+    });
+}
+
+function handleListHover(e) {
+    const item = e.target.closest('[data-idx]');
+    if (!item) return;
+    const idx = Number(item.dataset.idx);
+    chart.setActiveElements([{ datasetIndex: 0, index: idx }]);
+    queueChartUpdate();
+    if (e.type === 'click') {
+        chart.canvas.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    highlightListRow(idx);
+}
+
+function highlightListRow(idx) {
+    const active = document.querySelector('.list-row-active');
+    if (active) active.classList.remove('list-row-active');
+    const row = document.querySelector(`.list-row[data-idx="${idx}"]`);
+    if (row) row.classList.add('list-row-active');
+}
+
+function getLineGradient(context, stops) {
+    const { chart } = context;
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return stops[0].color;
+    const gradient = ctx.createLinearGradient(chartArea.left, chartArea.top, chartArea.right, chartArea.top);
+    stops.forEach(s => gradient.addColorStop(s.stop, s.color));
+    return gradient;
+}
+</script>
+    </body>
+</html>
