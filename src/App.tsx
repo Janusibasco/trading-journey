@@ -920,13 +920,13 @@ function App() {
           className="span-2"
           type="number"
           id="valueInput"
-          placeholder="Deposit Amount ($)"
+          placeholder="Enter Amount ($)"
           value={valueInput}
           onChange={(event) => setValueInput(event.target.value)}
         />
 
         <button type="button" className="btn btn-primary span-1" onClick={addData}>
-          Deposit
+          Add
         </button>
 
         <button type="button" className="btn btn-secondary span-1" onClick={clearData}>
